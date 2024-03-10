@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from database import db
 from models.meal import Meal
 from models.user import User
-import bcrypt 
 
 
 app = Flask(__name__)
@@ -94,16 +93,14 @@ def delete_meal(id_meal):
 def create_user():
     data = request.json
     username = data.get("username")
-    password = data.get("password")
     email = data.get("email")
 
-    if username and password and email:
+    if username and email:
         user = User.query.filter_by(email=email).first()
         if user:
             return jsonify({"message":"Usuário já cadastrado"})
         else:
-            hashed_password = bcrypt.hashpw(str.encode(password), bcrypt.gensalt())
-            new_user = User(username=username, password=hashed_password, email=email, role='user')
+            new_user = User(username=username, email=email)
             db.session.add(new_user)
             db.session.commit()
         return jsonify({"message": "Cadastro realizado com sucesso"})
@@ -114,7 +111,7 @@ def create_user():
 @app.route('/user', methods=['GET'])
 def read_users():
     users = User.query.all()
-    user_list = [{"id": user.id, "nome": user.username, "email": user.email, "role": user.role} for user in users]
+    user_list = [{"id": user.id, "nome": user.username, "email": user.email} for user in users]
     return jsonify(user_list)
 
 
