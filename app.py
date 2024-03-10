@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from database import db
 from models.meal import Meal
+from models.user import User
+import bcrypt 
 
 
 app = Flask(__name__)
@@ -12,23 +14,24 @@ db.init_app(app)
 
 #Rota de Refeições
 
-#Registro de refeições
+# registrar refeições
 @app.route('/meal', methods=['POST'])
 def register_meal():
     data = request.json
     name = data.get("name")
     description = data.get("description")
     in_diet = data.get("in_diet")
+    user_id = data.get("user_id")
 
-    if name and description:
-        new_meal = Meal(name=name, description=description, in_diet=in_diet)
+    if name and description and user_id:
+        new_meal = Meal(name=name, description=description, in_diet=in_diet, user_id=user_id)
         db.session.add(new_meal)
         db.session.commit()
         return jsonify({"message": "Refeição registrada com sucesso"})
                     
     return jsonify({"message": "Dádos incompletos"}), 400
 
-#Atualização de refeições
+# editar refeições
 @app.route('/meal/<int:id_meal>', methods=['PUT'])
 def update_meal(id_meal):
     data = request.json
@@ -46,23 +49,34 @@ def update_meal(id_meal):
 
         return jsonify({"message": "Informações incompletas"})
         
-#Leitura de todas as refeições
+# visualizar todas as refeições
 @app.route('/meal', methods=['GET'])
 def get_meals():
     meals = Meal.query.all()
-    meal_list = [{"ID": meal.id, "Descrição": meal.description,"Na Dieta": meal.in_diet, "Horário": meal.registered_at} for meal in meals]
+    meal_list = [{"id": meal.id, "descrição": meal.description,"na_dieta": meal.in_diet, "horario": meal.registered_at, "user_id": meal.user_id} for meal in meals]
     return jsonify(meal_list)
 
-#Consulta de refeição por id
+# visualizar uma única refeição por id
 @app.route('/meal/<int:id_meal>', methods=['GET'])
 def get_meal_by_id(id_meal):
     meal = Meal.query.get(id_meal)
     if not meal:
         return jsonify({"message": "Refeição não encontrada"})
     else:
-        return {"Nome": meal.name, "Descrição": meal.description, "Na Dieta": meal.in_diet, "Horário": meal.registered_at}
+        return {"nome": meal.name, "descrição": meal.description, "na_dieta": meal.in_diet, "horario": meal.registered_at, "user_id": meal.user_id}
 
-#Deleção de refeições
+# listar todas as refeições de um usuário pelo id do usuário 
+@app.route('/meal/user/<int:id_user>', methods=['GET'])
+def meal_by_user(id_user):
+    meals_by_user = Meal.query.filter_by(user_id=id_user).all()
+
+    if not meals_by_user:
+        return jsonify({"message": "Não há refeições registradas"})
+    else:
+        meal_list = [{"id": meal.id, "descrição": meal.description,"na_dieta": meal.in_diet, "horario": meal.registered_at} for meal in meals_by_user]
+        return jsonify(meal_list)
+    
+# apagar refeições
 @app.route('/meal/<int:id_meal>', methods=['DELETE'])
 def delete_meal(id_meal):
     meal = Meal.query.get(id_meal)
@@ -72,6 +86,36 @@ def delete_meal(id_meal):
         db.session.delete(meal)
         db.session.commit()
         return jsonify({"message": "Refeição removida!"})
+
+#Rotas de Usuários
+    
+# Criação de Usuários    
+@app.route('/user', methods=['POST'])
+def create_user():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+    email = data.get("email")
+
+    if username and password and email:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            return jsonify({"message":"Usuário já cadastrado"})
+        else:
+            hashed_password = bcrypt.hashpw(str.encode(password), bcrypt.gensalt())
+            new_user = User(username=username, password=hashed_password, email=email, role='user')
+            db.session.add(new_user)
+            db.session.commit()
+        return jsonify({"message": "Cadastro realizado com sucesso"})
+                    
+    return jsonify({"message": "Credenciais Inválidas"}), 400
+
+# Rota Leitura de todos os usuários
+@app.route('/user', methods=['GET'])
+def read_users():
+    users = User.query.all()
+    user_list = [{"id": user.id, "nome": user.username, "email": user.email, "role": user.role} for user in users]
+    return jsonify(user_list)
 
 
 if __name__ == '__main__':
