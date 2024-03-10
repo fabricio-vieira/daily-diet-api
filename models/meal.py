@@ -7,4 +7,4 @@ class Meal(db.Model):
     name = db.Column(db.String(80), nullable=False, unique=True )
     description = db.Column(db.String(80), nullable=False)
     in_diet = db.Column(db.Boolean, nullable=False, default=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    registered_at = db.Column(db.DateTime, nullable=False, default=datetime.now)
